@@ -2,13 +2,17 @@
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
 #
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Uu]ser[Ss]ettings/
+/OceanSim/[Ll]ibrary/
+/OceanSim/[Tt]emp/
+/OceanSim/[Oo]bj/
+/OceanSim/[Bb]uild/
+/OceanSim/[Bb]uilds/
+/OceanSim/[Ll]ogs/
+/OceanSim/[Uu]ser[Ss]ettings/
+/OceanSim/Assets/Crest
+/OceanSim/Assets/Crest-Examples
+/OceanSim/Assets/Crest.meta
+/OceanSim/Assets/Crest-Examples.meta
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data

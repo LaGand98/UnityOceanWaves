@@ -1,0 +1,126 @@
+#pragma kernel fft SIZE=8 PASSES=3 CHANNEL=x TX=8 TY=1 FINAL=0
+#pragma kernel fft SIZE=8 PASSES=3 CHANNEL=y TX=1 TY=8 FINAL=1
+#pragma kernel fft SIZE=16 PASSES=4 CHANNEL=x TX=16 TY=1 FINAL=0
+#pragma kernel fft SIZE=16 PASSES=4 CHANNEL=y TX=1 TY=16 FINAL=1
+#pragma kernel fft SIZE=32 PASSES=5 CHANNEL=x TX=32 TY=1 FINAL=0
+#pragma kernel fft SIZE=32 PASSES=5 CHANNEL=y TX=1 TY=32 FINAL=1
+#pragma kernel fft SIZE=64 PASSES=6 CHANNEL=x TX=64 TY=1 FINAL=0
+#pragma kernel fft SIZE=64 PASSES=6 CHANNEL=y TX=1 TY=64 FINAL=1
+#pragma kernel fft SIZE=128 PASSES=7 CHANNEL=x TX=128 TY=1 FINAL=0
+#pragma kernel fft SIZE=128 PASSES=7 CHANNEL=y TX=1 TY=128 FINAL=1
+#pragma kernel fft SIZE=256 PASSES=8 CHANNEL=x TX=256 TY=1 FINAL=0
+#pragma kernel fft SIZE=256 PASSES=8 CHANNEL=y TX=1 TY=256 FINAL=1
+#pragma kernel fft SIZE=512 PASSES=9 CHANNEL=x TX=512 TY=1 FINAL=0
+#pragma kernel fft SIZE=512 PASSES=9 CHANNEL=y TX=1 TY=512 FINAL=1
+#pragma kernel fft SIZE=1024 PASSES=10 CHANNEL=x TX=1024 TY=1 FINAL=0
+#pragma kernel fft SIZE=1024 PASSES=10 CHANNEL=y TX=1 TY=1024 FINAL=1
+
+Texture2D<float2> input;
+Texture2D<float2> inputButterfly;
+
+#if !FINAL
+RWTexture2D<float2> output;
+#else
+RWTexture2D<float> output;
+#endif
+
+groupshared float2 intermediates[SIZE];
+groupshared float2 scratch[SIZE];
+
+/*#if !defined(reversebits)
+uint reversebits(uint x)
+{
+    x = ((x >> 1) & 0x55555555u) | ((x & 0x55555555u) << 1);
+    x = ((x >> 2) & 0x33333333u) | ((x & 0x33333333u) << 2);
+    x = ((x >> 4) & 0x0f0f0f0fu) | ((x & 0x0f0f0f0fu) << 4);
+    x = ((x >> 8) & 0x00ff00ffu) | ((x & 0x00ff00ffu) << 8);
+    x = ((x >> 16) & 0xffffu) | ((x & 0xffffu) << 16);
+    return x;
+}
+#endif*/
+
+void ButterflyPass(float2 butterfly, uint coord, uint passIndex)
+{
+    uint IndexA, IndexB;
+
+    uint offset = 1 << passIndex;
+    if ((coord / offset) % 2 == 1)
+    {
+        IndexA = coord - offset;
+        IndexB = coord;
+    }
+    else
+    {
+        IndexA = coord;
+        IndexB = coord + offset;
+    }
+
+    if (passIndex == 0)
+    {
+        IndexA = reversebits(IndexA) >> (32 - PASSES);
+        IndexB = reversebits(IndexB) >> (32 - PASSES);
+    }
+
+    const bool pingpong = (passIndex % 2) == 0;
+
+    float2 valueA, valueB;
+    if (pingpong)
+    {
+        valueA = intermediates[IndexA];
+        valueB = intermediates[IndexB];
+    }
+    else
+    {
+        valueA = scratch[IndexA];
+        valueB = scratch[IndexB];
+    }
+
+    float2 weight = butterfly.xy;
+    float2 weightedValueB = weight * valueB.r + weight.gr * valueB.g * float2(-1, 1);
+    float2 result = valueA + weightedValueB;
+    
+    if (pingpong)
+    {
+        scratch[coord] = result;
+    }
+    else
+    {
+        intermediates[coord] = result;
+    }
+}
+
+float2 conj(float2 v)
+{
+    return float2(v.x, -v.y);
+}
+
+
+[numthreads(TX, TY, 1)]
+void fft(uint2 id : SV_DispatchThreadID)
+{
+    uint coord = id.CHANNEL;
+    
+#if !FINAL
+    intermediates[coord] = conj(input[id]);
+#else
+    intermediates[coord] = input[id];
+#endif
+
+    [unroll(PASSES)]
+    for (uint passIndex = 0; passIndex < PASSES; ++passIndex)
+    {
+        GroupMemoryBarrierWithGroupSync();
+        ButterflyPass(inputButterfly[uint2(coord, passIndex)], coord, passIndex);
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    const bool pingpong = (PASSES % 2) == 0;
+    const float2 result = pingpong ? intermediates[coord] : scratch[coord];
+#if !FINAL
+    output[id] = result;
+#else
+    const float sign = ((id.x + id.y) % 2) == 1 ? -1.0f : 1.0f;
+    output[id] = sign * result.x;
+#endif
+}

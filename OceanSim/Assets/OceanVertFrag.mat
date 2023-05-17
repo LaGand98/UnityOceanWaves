@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OceanVertFrag
+  m_Shader: {fileID: 4800000, guid: 359cd9afe58d4514e9c7e3042eae395b, type: 3}
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CausticsTexture:
+        m_Texture: {fileID: 2800000, guid: de26f8f34c9f4d344aabafb102da586e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DisplacementMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 10, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _FoamBubbles:
+        m_Texture: {fileID: 2800000, guid: b6b05c55e02da694b852764b5d03306f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoamEnergy:
+        m_Texture: {fileID: 2800000, guid: d039ce3f1980106478a88b6d02f4c88b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 10, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _WindGusts:
+        m_Texture: {fileID: 2800000, guid: d389d76e069e1644f8b5e0a31d68c05b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CausticsDepthOfField: 45
+    - _CausticsDistortionScale: 29.7
+    - _CausticsDistortionStrength: 0.004
+    - _CausticsFocalDepth: 55
+    - _CausticsStrength: 1.66
+    - _CausticsTextureAverage: 0
+    - _CausticsTextureScale: 11.5
+    - _DirectionalLightBoost: 13.5
+    - _EdgeLength: 42.1
+    - _FresnelPower: 3.55
+    - _Metal: 0
+    - _OceanDepth: 5
+    - _RefractionStrength: 0.172
+    - _Roughness: 0.286
+    - _SSSPower: 2
+    - _Specular: 0.382
+    - _SubSurfaceBase: 0.28
+    - _SubSurfaceSun: 0.55
+    - _SubSurfaceSunFallOff: 1
+    - _SunThreshold: 0.8
+    - _TessellationEdgeLength: 1
+    - _TexelWidth: 1
+    - _WaterFogDensity: 0.24
+    m_Colors:
+    - _Diffuse: {r: 0, g: 0, b: 0.4627451, a: 1}
+    - _DiffuseGrazing: {r: 0, g: 0.07204294, b: 1, a: 1}
+    - _FoamColor: {r: 0.8002848, g: 0.86919016, b: 0.9056604, a: 1}
+    - _SSSColor: {r: 1, g: 1, b: 1, a: 0}
+    - _SubSurfaceColor: {r: 0, g: 0.6415094, b: 0.6101756, a: 1}
+    - _WaterFogColor: {r: 0, g: 0.35978818, b: 1, a: 1}
+    - _WaterFogDensity: {r: 0.9, g: 0.3, b: 0.35, a: 1}
+    - _WaveFoamDir: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
