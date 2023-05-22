@@ -1,0 +1,61 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel fixMask
+
+#pragma multi_compile __ STEREO_INSTANCING_ON
+
+#include "UnityCG.cginc"
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float> Mask;
+
+[numthreads(8,8,1)]
+void fixMask (uint3 id : SV_DispatchThreadID)
+{
+    {
+        float pixel = Mask[id.xy + uint2(0, 100)];
+        float pixel2 = Mask[id.xy + uint2(0, 300)];
+        if (pixel > 0 && pixel2 > 0)
+        {
+            Mask[id.xy] = pixel;
+            return;
+        }
+    }
+    {
+        float pixel = Mask[id.xy - uint2(0, 100)];
+        float pixel2 = Mask[id.xy - uint2(0, 300)];
+        if (pixel < 0 && pixel2 < 0)
+        {
+            Mask[id.xy] = pixel;
+            return;
+        }
+    }
+    /*const uint3 offset = uint3(1, -1, 0);
+
+    {
+        const float4 pixels = float4(
+            Mask[id.xy + offset.xz],
+            Mask[id.xy + offset.yz],
+            Mask[id.xy + offset.zy],
+            Mask[id.xy + offset.zx]);
+        if (pixels.x == pixels.y && pixels.x == pixels.z && pixels.z == pixels.w)
+        {
+            Mask[id.xy] = pixels.x;
+            return;
+        }
+    }
+
+    {
+        const float4 pixels = float4(
+            Mask[id.xy + offset.xx],
+            Mask[id.xy + offset.yy],
+            Mask[id.xy + offset.xy],
+            Mask[id.xy + offset.yx]
+            );
+        if (pixels.x == pixels.y && pixels.x == pixels.z && pixels.z == pixels.w)
+        {
+            Mask[id.xy] = pixels.x;
+            return;
+        }
+    }*/
+}

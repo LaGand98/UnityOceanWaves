@@ -29,7 +29,6 @@ Shader "Custom/UnderwaterFogShader"
     {
         // No culling or depth
         Cull Off ZWrite Off ZTest Always
-        GrabPass{ "_WaterBackground" }
         Pass
         {
             CGPROGRAM
@@ -41,6 +40,22 @@ Shader "Custom/UnderwaterFogShader"
             #include "UnityCG.cginc"
             #include "OceanHelper.cginc"
 
+            //sampler2D _MainTex;
+            sampler2D _Mask;
+            sampler2D _CameraDepthTexture;
+            float4 _TintShade;
+            float4 _DepthFogDensity;
+            float3 _WaterFogColor;
+
+            half3 _SubSurfaceColor;
+            half3 _SubSurfaceSunFallOff;
+            half4 _Diffuse;
+            half4 _DiffuseGrazing;
+            half _SubSurfaceBase;
+            half _SubSurfaceSun;
+            float4x4 _InvViewProject;
+
+
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -50,13 +65,15 @@ Shader "Custom/UnderwaterFogShader"
 
             struct v2f
             {
+                //float2 uv : TEXCOORD0;
                 float2 uv : TEXCOORD0;
-                float2 uv2 : TEXCOORD3;
                 float4 vertex : SV_POSITION;
                 float3 viewVector : TEXCOORD1;
+                float3 worldPos : TEXCOORD4;
                 #if defined(FOG_DISTANCE)
                     float3 ray : TEXCOORD2;
                 #endif
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             float3 _FrustumCorners[4];
@@ -85,33 +102,25 @@ Shader "Custom/UnderwaterFogShader"
             v2f vert(appdata v)
             {
                 v2f o;
-                o.vertex = GetFullScreenTriangleVertexPosition(v.id);
-                o.uv = GetFullScreenTriangleTexCoord(v.id); //o.uv = TransformTriangleVertexToUV(v.vertex.xy);
-                o.uv2 = v.uv;//TransformTriangleVertexToUV(v.vertex.xy);
-                float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv.xy * 2 - 1, 0, -1));
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_OUTPUT(v2f, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                //o.vertex = GetFullScreenTriangleVertexPosition(v.id);
+                o.vertex = v.vertex * float4(2, 2, 1, 1) - float4(1, 1, 0, 0);
+                //o.uv = GetFullScreenTriangleTexCoord(v.id); //o.uv = TransformTriangleVertexToUV(v.vertex.xy);
+                o.uv = v.uv;//TransformTriangleVertexToUV(v.vertex.xy);
+                o.uv.y = 1 - o.uv.y;
+                float3 viewVector = mul(unity_CameraInvProjection, float4(o.uv.xy * 2 - 1, 0, -1));
                 o.viewVector = mul(unity_CameraToWorld, float4(viewVector, 0));
                 #if defined(FOG_DISTANCE)
                 o.ray = _FrustumCorners[v.uv.x + 2 * v.uv.y];
                 #endif
+                // Construct a vector on the Z = 0 plane corresponding to our screenspace location.
+                float4 clip = float4((v.uv.xy * 2.0f - 1.0f) * float2(1, -1), 0.0f, 1.0f);
+                // Use matrix computed in script to convert to worldspace.
+                o.worldPos = mul(_InvViewProject, clip);
                 return o;
             }
-
-            sampler2D _MainTex;
-            sampler2D _Mask;
-            sampler2D _CameraDepthTexture;
-            float4 _TintShade;
-            float4 _DepthFogDensity;
-            float3 _WaterFogColor;
-
-            half3 _SubSurfaceColor;
-            half3 _SubSurfaceSunFallOff;
-            half4 _Diffuse;
-            half4 _DiffuseGrazing;
-            half _SubSurfaceBase;
-            half _SubSurfaceSun;
-            float4x4 _InvViewProject;
-
-            // float3 _WorldSpaceCameraPos;
 
             half MeniscusStrength(half2 uv, half4 mask, half offset)
             {
@@ -125,7 +134,7 @@ Shader "Custom/UnderwaterFogShader"
                 float v = abs(viewDir.y);
                 half3 col = lerp(_DiffuseGrazing, _Diffuse, v);
                 col *= ambientLighting;
-                half towardsSun = pow(max(0., dot(_WorldSpaceLightPos0.xyz, viewDir)), 1);
+                half towardsSun = pow(max(0., dot(_WorldSpaceLightPos0.xyz, -viewDir)), 1);
                 half3 subsurface = (_SubSurfaceBase + _SubSurfaceSun * towardsSun) * _SubSurfaceColor.rgb * _LightColor0;
                 subsurface *= (1.0 - v * v);
                 col += subsurface;
@@ -148,7 +157,6 @@ Shader "Custom/UnderwaterFogShader"
             sampler2D _NormalMap;
             float _CausticsStrength;
             float _OceanDepth;
-            sampler2D _WaterBackground;
             sampler2D _Displacements;
             float TexelWidth;
 
@@ -204,21 +212,28 @@ Shader "Custom/UnderwaterFogShader"
                         );
             }
 
-            fixed4 sampling(v2f iTexCoord) : SV_Target
+            UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
+
+            float _FarPlaneOffset;
+
+            fixed4 sampling(v2f i) : SV_Target
             {
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(iTexCoord);
-                fixed4 sceneColor = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, iTexCoord.uv);//tex2D(_MainTex, iTexCoord.uv);
-                fixed4 maskColor = tex2D(_Mask, iTexCoord.uv);
-                bool underwater = maskColor > 0;
+                //UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                fixed4 sceneColor = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv);
+                fixed4 maskColor = tex2D(_Mask, i.uv);
+                float rawDepth = tex2D(_CameraDepthTexture, i.uv).r;
+                float depth = Linear01Depth(UNITY_SAMPLE_DEPTH(tex2D(_CameraDepthTexture, i.uv)));
+                float3 positionWS = ComputeWorldSpacePosition(i.uv, depth, _InvViewProject);
+                float positionWSy = ComputeWorldSpacePosition(i.uv, rawDepth, _InvViewProject).y;
+                bool underwater = positionWSy < 0;
+                underwater = (underwater || maskColor > 0) && !(maskColor < 0);
                 if (underwater)
                 {
-                    float rawDepth = tex2D(_CameraDepthTexture, iTexCoord.uv).r;
-                    float depth = Linear01Depth(rawDepth);
                     float viewDistance = depth * _ProjectionParams.z - _ProjectionParams.y;
                     #if defined(FOG_DISTANCE)
-                    viewDistance = length(iTexCoord.ray * depth);
+                    viewDistance = length(i.ray * depth);
                     #endif
-                    float3 positionWS = ComputeWorldSpacePosition(iTexCoord.uv, rawDepth, _InvViewProject);
+                    
                     half3 viewDir = normalize(_WorldSpaceCameraPos - positionWS);
                     //const half3 viewDir = normalize(iTexCoord.viewVector);
                     fixed3 fogColor = GetFogColor(viewDir, maskColor, sceneColor, depth);
@@ -231,15 +246,13 @@ Shader "Custom/UnderwaterFogShader"
                     fogFactor = exp2(-fogFactor * fogFactor);
 
                     fogFactor = saturate(fogFactor);
-                    /*if (rawDepth > 0.9999) {
-                        fogFactor = 1;
-                    }*/
+
                     float3 scenePos = _WorldSpaceCameraPos - viewDir * depth / dot(UNITY_MATRIX_I_V._13_23_33, viewDir);
                     float disp = tex2D(_Displacements, WorldToUV(scenePos, float2(0, 0), TexelWidth, 512));
                     Caustics(scenePos, _WorldSpaceLightPos0, depth, sceneColor.xyz, disp);
                     sceneColor.xyz = lerp(fogColor, sceneColor.xyz, fogFactor);
                 }
-                sceneColor.xyz *= MeniscusStrength(iTexCoord.uv, maskColor, 0.01);
+                //sceneColor.xyz *= MeniscusStrength(i.uv2, maskColor, 0.01);
                 return sceneColor;
             }
             ENDCG

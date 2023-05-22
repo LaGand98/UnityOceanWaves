@@ -10,6 +10,7 @@ struct v2f
 {
 	float4 positionCS : SV_POSITION;
     float2 uv : TEXCOORD0;
+    uint id : TEXCOORD1;
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
@@ -21,14 +22,13 @@ v2f vert(Attributes i)
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
     o.positionCS = FullScreenTriangleV(i.id, _FarPlaneOffset);
     o.uv = FullScreenTriangleUV(i.id);
+    o.id = i.id;
 	return o;
 }
-
-sampler2D _CameraDepthTexture;
 
 half4 frag(const v2f i, const bool isFrontFace : SV_IsFrontFace) : SV_TARGET
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-    float3 positionWS = ComputeWorldSpacePosition(i.uv, _FarPlaneOffset, UNITY_MATRIX_I_VP);
-    return (half4) positionWS.y > _OceanCenterPosWorld.y ? (half4)-1 : (half4)1;
+    float3 positionWS = ComputeWorldSpacePosition(i.uv, _FarPlaneOffset, _InvViewProjection);
+    return (half4) positionWS.y > _OceanCenterPosWorld.y ? -1 : 1;
 }

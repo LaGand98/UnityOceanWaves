@@ -2,7 +2,7 @@ Shader "Unlit/OceanMaskShader"
 {
     Properties
     {
-        _DisplacementMap("Displacement", 2D) = "white" {}
+        _DisplacementMap("Displacement", 2DArray) = "white" {}
     }
     SubShader
     {
@@ -24,7 +24,7 @@ Shader "Unlit/OceanMaskShader"
             float3 _SnappedWorldPosition;
             float3 _ViewOrigin;
             float _InvDomainSize;
-            Texture2D _DisplacementMap;
+            Texture2DArray _DisplacementMap;
             float _Choppiness;
             float _Displacement;
             #include "UnityCG.cginc"
@@ -46,6 +46,7 @@ Shader "Unlit/OceanMaskShader"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma target 3.5
             #include "UnityCG.cginc"
             #include "OceanHelper.cginc"
             float4x4 _InvViewProjection;

@@ -45,7 +45,7 @@ float4 WavePoint(float2 position, float amplitude, float wavelength, float speed
 	return float4(waveGretsX, waveGretsY, waveGretsZ, crestFactor);
 }
 
-float4 FullScreenTriangleV(uint id, float FarPlane)
+float4 FullScreenTriangleV(uint id, float FarPlane = UNITY_NEAR_CLIP_VALUE)
 {
 	float2 uv = float2((id << 1) & 2, id & 2);
 	return float4(uv * 2.0 - 1.0, FarPlane, 1.0);
